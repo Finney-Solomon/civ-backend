@@ -1,19 +1,7 @@
-const pino = require('pino');
-const config = require('../config');
+const pino = require("pino");
 
 const logger = pino({
-  level: config.env === 'production' ? 'info' : 'debug',
-  transport:
-    config.env !== 'production'
-      ? {
-          target: 'pino-pretty',
-          options: {
-            colorize: true,
-            translateTime: 'SYS:standard',
-            ignore: 'pid,hostname',
-          },
-        }
-      : undefined,
+  level: process.env.NODE_ENV === "production" ? "info" : "debug",
 });
 
 module.exports = logger;
