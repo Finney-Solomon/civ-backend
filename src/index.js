@@ -1,0 +1,87 @@
+const path = require("path");
+require("dotenv").config({
+  path: path.join(__dirname, "..", ".env"), // ✅ apps/server/.env
+});
+
+const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+const morgan = require("morgan");
+const mongoSanitize = require("express-mongo-sanitize");
+const rateLimit = require("express-rate-limit");
+
+const config = require("./config");
+const connectDB = require("./config/database");
+const logger = require("./utils/logger");
+const errorHandler = require("./middleware/errorHandler");
+
+const authRoutes = require("./routes/auth.routes");
+const brandRoutes = require("./routes/brand.routes");
+const templateRoutes = require("./routes/template.routes");
+const editionRoutes = require("./routes/edition.routes");
+const sectionRoutes = require("./routes/section.routes");
+const allocationRoutes = require("./routes/allocation.routes");
+const readerRoutes = require("./routes/reader.routes");
+const subscriptionRoutes = require("./routes/subscription.routes");
+const paymentRoutes = require("./routes/payment.routes");
+const adminRoutes = require("./routes/admin.routes");
+const adminUsersRoutes = require("./routes/admin.users.routes");
+
+const app = express();
+
+// (optional) debug once
+logger.info(`JWT_SECRET loaded? ${!!process.env.JWT_SECRET}`);
+
+connectDB();
+
+app.use(helmet());
+
+app.use(
+  cors({
+    origin: config.cors.origins,
+    credentials: true,
+  })
+);
+
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(mongoSanitize());
+
+if (config.env === "development") app.use(morgan("dev"));
+
+const authLimiter = rateLimit({
+  windowMs: config.rateLimit.windowMs,
+  max: 20,
+  message: "Too many authentication attempts, please try again later",
+});
+
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    env: config.env,
+  });
+});
+
+app.use("/api/v1/auth", authLimiter, authRoutes);
+// app.use("/api/v1/admin", adminRoutes);
+app.use("/api/v1/admin", adminUsersRoutes);
+app.use("/api/v1/brands", brandRoutes);
+app.use("/api/v1/templates", templateRoutes);
+app.use("/api/v1/editions", editionRoutes);
+app.use("/api/v1/sections", sectionRoutes);
+app.use("/api/v1/allocations", allocationRoutes);
+app.use("/api/v1/reader", readerRoutes);
+app.use("/api/v1/subscriptions", subscriptionRoutes);
+app.use("/api/v1/payments", paymentRoutes);
+
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: "Route not found" });
+});
+
+app.use(errorHandler);
+
+const PORT = config.port;
+app.listen(PORT, () => logger.info(`🚀 Server running on port ${PORT} in ${config.env} mode`));
+
+module.exports = app;
