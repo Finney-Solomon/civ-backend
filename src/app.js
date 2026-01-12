@@ -31,18 +31,34 @@ connectDB().catch((err) => {
 });
 
 app.use(helmet());
+
+const allowedOrigins = [
+  "https://civ-admin.vercel.app",   // frontend
+  "https://civ-backend.vercel.app", // backend (optional)
+  "http://localhost:3000",
+  "http://localhost:5173",
+];
+
 app.use(
   cors({
-    origin: [
-      "https://civ-backend.vercel.app",
-      "http://localhost:3000",
-      "http://localhost:5173"
-    ],
+    origin: function (origin, callback) {
+      // allow server-side, curl, postman
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("CORS not allowed for origin: " + origin));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// ✅ VERY IMPORTANT — handle preflight
+app.options("*", cors());
 
 
 app.use(express.json({ limit: "10mb" }));
