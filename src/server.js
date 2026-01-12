@@ -1,9 +1,8 @@
-const path = require("path");
-
-// load .env locally
-require("dotenv").config({
-  path: path.join(__dirname, "..", ".env"),
-});
+// Local server runner (NOT used by Vercel serverless)
+if (process.env.NODE_ENV !== "production") {
+  // optional for local usage only
+  require("dotenv").config();
+}
 
 const app = require("./app");
 const config = require("./config");
