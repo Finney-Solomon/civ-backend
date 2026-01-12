@@ -1,12 +1,9 @@
-// Local server runner (NOT used by Vercel serverless)
-if (process.env.NODE_ENV !== "production") {
-  // optional for local usage only
-  require("dotenv").config();
-}
+const path = require("path");
+require("dotenv").config({ path: path.join(process.cwd(), ".env") });
 
-const app = require("./app");
-const config = require("./config");
-const logger = require("./utils/logger");
+const app = require("./src/app");
+const config = require("./src/config");
+const logger = require("./src/utils/logger");
 
 const PORT = config.port || 5004;
 

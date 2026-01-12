@@ -25,41 +25,38 @@ const app = express();
 
 logger.info(`JWT_SECRET loaded? ${!!process.env.JWT_SECRET}`);
 
-// connect DB (won’t kill process)
+// DB connect
 connectDB().catch((err) => {
   logger.error({ err }, "Mongo connection failed");
 });
 
 app.use(helmet());
 
+// ✅ CORS
 const allowedOrigins = [
-  "https://civ-admin.vercel.app",   // frontend
-  "https://civ-backend.vercel.app", // backend (optional)
+  "https://civ-admin.vercel.app",
   "http://localhost:3000",
   "http://localhost:5173",
 ];
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // allow server-side, curl, postman
-      if (!origin) return callback(null, true);
+const corsOptions = {
+  origin: function (origin, callback) {
+    // allow server-side / curl / postman
+    if (!origin) return callback(null, true);
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+    if (allowedOrigins.includes(origin)) return callback(null, true);
 
-      return callback(new Error("CORS not allowed for origin: " + origin));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+    return callback(new Error("CORS not allowed for origin: " + origin));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
 
-// ✅ VERY IMPORTANT — handle preflight
-app.options("*", cors());
+app.use(cors(corsOptions));
 
+// ✅ IMPORTANT: preflight must use SAME options
+app.options("*", cors(corsOptions));
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -74,7 +71,11 @@ const authLimiter = rateLimit({
 });
 
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString(), env: config.env });
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    env: config.env,
+  });
 });
 
 app.use("/api/v1/auth", authLimiter, authRoutes);
@@ -88,7 +89,10 @@ app.use("/api/v1/reader", readerRoutes);
 app.use("/api/v1/subscriptions", subscriptionRoutes);
 app.use("/api/v1/payments", paymentRoutes);
 
-app.use((req, res) => res.status(404).json({ success: false, message: "Route not found" }));
+app.use((req, res) =>
+  res.status(404).json({ success: false, message: "Route not found" })
+);
+
 app.use(errorHandler);
 
 module.exports = app;
