@@ -145,13 +145,14 @@ class EditionService {
 
   const sections = await MagazineSection.find({ edition_id: id });
 
-  const requiredSections = sections.filter(
-   (s) => s.status !== "approved" && s.status !== "published"
-  );
+  // console.log(requiredSections,"requiredSections")
+  // const requiredSections = sections.filter(
+  //  (s) => s.status !== "approved" && s.status !== "published"
+  // );
 
-  if (requiredSections.length > 0) {
-   throw new Error("All sections must be approved before publishing");
-  }
+  // if (requiredSections.length > 0) {
+  //  throw new Error("All sections must be approved before publishing");
+  // }
 
   edition.status = "published";
   edition.published_at = new Date();
