@@ -43,6 +43,7 @@ const allowedOrigins = [
   "https://civ-admin.vercel.app",
   "http://localhost:3000",
   "http://localhost:5173",
+  "https://civ-admin-ten.vercel.app"
 ];
 
 const corsOptions = {
