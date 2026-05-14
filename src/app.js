@@ -98,7 +98,7 @@ app.get("/health", (req, res) => {
   });
 });
 
-app.use("/api", apiLimiter);
+app.use("/apiLimiter", apiLimiter);
 app.use("/api/v1/auth", authLimiter, authRoutes);
 app.use("/api/v1/admin", adminUsersRoutes);
 app.use("/api/v1/brands", brandRoutes);
