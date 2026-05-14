@@ -6,6 +6,12 @@ const { authenticate, requireRole } = require("../middleware/auth");
 // list + create
 router.get("/", authenticate, editionController.getAll);
 router.post("/", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), editionController.create);
+router.post(
+  "/publish-complete",
+  authenticate,
+  requireRole("SUPER_ADMIN", "ADMIN"),
+  editionController.createAndPublish
+);
 
 // get + update (✅ add PATCH to match frontend)
 router.get("/:id", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), editionController.getById);

@@ -305,15 +305,24 @@ const seed = async () => {
 
     console.log(`✅ Created ${sections.length} sections for the edition`);
 
-    const yearlyPlan = await SubscriptionPlan.create({
-      brand_id: brand._id,
-      name: 'Yearly Subscription',
-      period: 'yearly',
-      price_inr: 999,
-      is_active: true,
-    });
+    const [monthlyPlan, yearlyPlan] = await SubscriptionPlan.insertMany([
+      {
+        brand_id: brand._id,
+        name: 'Monthly Subscription',
+        period: 'monthly',
+        price_inr: 99,
+        is_active: true,
+      },
+      {
+        brand_id: brand._id,
+        name: 'Yearly Subscription',
+        period: 'yearly',
+        price_inr: 999,
+        is_active: true,
+      },
+    ]);
 
-    console.log('✅ Created yearly subscription plan (₹999)');
+    console.log('✅ Created subscription plans (₹99 monthly, ₹999 yearly)');
 
     console.log('\n✨ Seed completed successfully!');
     console.log('\n📝 Test Credentials:');
@@ -323,7 +332,7 @@ const seed = async () => {
     console.log(`- Brand: ${brand.name} (slug: ${brand.slug})`);
     console.log(`- Template: ${template.name} with ${template.slots.length} slots`);
     console.log(`- Edition: ${currentYear}-${String(currentMonth).padStart(2, '0')} (${edition.status})`);
-    console.log(`- Subscription Plan: ${yearlyPlan.name} - ₹${yearlyPlan.price_inr}`);
+    console.log(`- Subscription Plans: ${monthlyPlan.name} - ₹${monthlyPlan.price_inr}, ${yearlyPlan.name} - ₹${yearlyPlan.price_inr}`);
   } catch (error) {
     console.error('❌ Seed error:', error);
     throw error;

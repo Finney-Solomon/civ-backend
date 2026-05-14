@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const sectionController = require("../controllers/section.controller");
+const audioController = require("../controllers/audio.controller");
 const { authenticate, requireRole } = require("../middleware/auth");
 
 // read
@@ -43,6 +44,36 @@ router.post(
   authenticate,
   requireRole("SUPER_ADMIN", "ADMIN"),
   sectionController.reject
+);
+
+// TTS audio
+router.post(
+  "/:id/audio/generate",
+  authenticate,
+  requireRole("SUPER_ADMIN", "ADMIN", "AUTHOR"),
+  audioController.generate
+);
+
+router.post(
+  "/:id/audio/regenerate",
+  authenticate,
+  requireRole("SUPER_ADMIN", "ADMIN", "AUTHOR"),
+  audioController.regenerate
+);
+
+router.delete(
+  "/:id/audio",
+  authenticate,
+  requireRole("SUPER_ADMIN", "ADMIN", "AUTHOR"),
+  audioController.delete
+);
+
+// ─── TEST ONLY: Stream audio directly (no S3 needed) ───
+router.post(
+  "/:id/audio/test-generate",
+  authenticate,
+  requireRole("SUPER_ADMIN", "ADMIN", "AUTHOR"),
+  audioController.testGenerate
 );
 
 module.exports = router;

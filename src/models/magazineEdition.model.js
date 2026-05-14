@@ -25,6 +25,7 @@ const magazineEditionSchema = new Schema(
     cover_front_url: { type: String, default: "" },
     cover_back_url: { type: String, default: "" },
     pdf_url: { type: String, default: "" },
+    is_audio_available: { type: Boolean, default: false },
 
     template_id: { type: Schema.Types.ObjectId, ref: "MagazineTemplate", required: true },
 

@@ -13,7 +13,63 @@ const imageSchema = new Schema(
 );
 
 const audioSchema = new Schema(
-  { url: { type: String, default: "" }, duration_sec: { type: Number, default: 0 }, narrator: { type: String, default: "" } },
+  {
+    // Core file info
+    url: { type: String, default: "" }, // Public S3 URL
+    key: { type: String, default: "" }, // S3 object key (important for delete/regenerate)
+    mime_type: { type: String, default: "audio/mpeg" }, // mp3, wav, etc
+    size_bytes: { type: Number, default: 0 },
+
+    // Playback metadata
+    duration_sec: { type: Number, default: 0 },
+    bitrate: { type: Number, default: 0 },
+
+    // Language & voice
+    language: { type: String, default: "en-IN" }, // ta-IN, te-IN, hi-IN
+    voice: { type: String, default: "default" }, // neural voice name
+    narrator: { type: String, default: "" }, // optional display name
+
+    // Provider info (important for switching later)
+    provider: {
+      type: String,
+      enum: ["google", "aws", "azure", "browser", "elevenlabs"],
+      default: "google",
+    },
+
+    // Status lifecycle (VERY IMPORTANT)
+    status: {
+      type: String,
+      enum: ["not_generated", "processing", "generated", "failed"],
+      default: "not_generated",
+    },
+
+    // Content tracking (for caching & cost control)
+    content_hash: { type: String, default: "" }, // sha256 of text + language + voice
+    text_length: { type: Number, default: 0 }, // characters used for billing
+
+    // Timestamps
+    generated_at: { type: Date },
+    last_requested_at: { type: Date },
+
+    // Error handling
+    error_message: { type: String, default: "" },
+    retry_count: { type: Number, default: 0 },
+
+    // Control flags
+    is_cached: { type: Boolean, default: false }, // reused audio
+    version: { type: Number, default: 1 }, // for future upgrades
+
+    // Optional advanced features
+    segments: [
+      {
+        index: Number,
+        text: String,
+        duration_sec: Number,
+      },
+    ], // if you split audio into chunks
+
+    playback_speed: { type: Number, default: 1.0 }, // future support
+  },
   { _id: false }
 );
 
@@ -31,7 +87,7 @@ const sectionContentSchema = new Schema(
   {
     section_type: {
       type: String,
-      enum: ["editorial", "story", "message", "testimony", "field_report", "devotional", "announcement", "prayer", "closing", "other"],
+      enum: ["editorial", "story", "message", "testimony", "field_report", "devotional", "announcement", "prayer", "closing", "reports", "meetings", "field_updates", "other"],
       required: true,
     },
     title: { type: String, trim: true, default: "" },

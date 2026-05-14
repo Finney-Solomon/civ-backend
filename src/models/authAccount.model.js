@@ -7,6 +7,8 @@ const authAccountSchema = new Schema(
     email: { type: String, trim: true, lowercase: true, sparse: true, index: true },
     phone: { type: String, trim: true, sparse: true, index: true },
     password_hash: { type: String, required: true },
+    login_otp_hash: { type: String, default: "" },
+    login_otp_expires_at: { type: Date, default: null },
 
     is_email_verified: { type: Boolean, default: false },
     is_phone_verified: { type: Boolean, default: false },

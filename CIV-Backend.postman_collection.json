@@ -1,0 +1,727 @@
+{
+  "info": {
+    "_postman_id": "civ-backend-v1",
+    "name": "✝️ Christ Is Victor — Backend API",
+    "description": "Complete API collection for the CIV monthly digital magazine backend.\n\nSetup:\n1. Import this collection\n2. Create an environment called 'CIV Local' with variable `baseUrl = http://localhost:5004/api/v1`\n3. Run 'Auth > Login' — the access token is auto-saved\n4. All protected requests use {{accessToken}} automatically\n\nElevenLabs TTS Variables (add to your Postman environment):\n- ELEVENLABS_API_KEY\n- ELEVENLABS_VOICE_ID (default: 21m00Tcm4TlvDq8ikWAM — Rachel)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5004/api/v1", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "brandId", "value": "", "type": "string" },
+    { "key": "templateId", "value": "", "type": "string" },
+    { "key": "editionId", "value": "", "type": "string" },
+    { "key": "sectionId", "value": "", "type": "string" },
+    { "key": "planId", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"Password@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success) {",
+                  "  pm.collectionVariables.set('accessToken', res.data.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', res.data.refreshToken);",
+                  "  pm.collectionVariables.set('userId', res.data.user.id);",
+                  "  console.log('Tokens saved!');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"Password@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success) {",
+                  "  pm.collectionVariables.set('accessToken', res.data.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', res.data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/refresh",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/logout",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📰 Brands",
+      "item": [
+        {
+          "name": "List Brands",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/brands"
+          }
+        },
+        {
+          "name": "Create Brand",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success) pm.collectionVariables.set('brandId', res.data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/brands",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Christ Is Victor\",\n  \"slug\": \"christ-is-victor\",\n  \"description\": \"A monthly Christian magazine filled with devotionals, stories, and messages.\",\n  \"language\": \"en\",\n  \"status\": \"active\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Brand by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/brands/{{brandId}}"
+          }
+        },
+        {
+          "name": "Update Brand",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/brands/{{brandId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated description for the magazine.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Archive Brand",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/brands/{{brandId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📋 Templates",
+      "item": [
+        {
+          "name": "List Templates",
+          "request": { "method": "GET", "url": "{{baseUrl}}/templates" }
+        },
+        {
+          "name": "Create Template",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success) pm.collectionVariables.set('templateId', res.data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/templates",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Standard Monthly Template\",\n  \"brand_id\": \"{{brandId}}\",\n  \"slots\": [\n    { \"key\": \"editorial\", \"label\": \"Editor's Note\", \"order\": 1, \"defaults\": { \"section_type\": \"editorial\" } },\n    { \"key\": \"cover-story\", \"label\": \"Cover Story\", \"order\": 2, \"defaults\": { \"section_type\": \"story\" } },\n    { \"key\": \"message\", \"label\": \"Monthly Message\", \"order\": 3, \"defaults\": { \"section_type\": \"message\" } },\n    { \"key\": \"testimony\", \"label\": \"Testimony\", \"order\": 4, \"defaults\": { \"section_type\": \"testimony\" } },\n    { \"key\": \"devotional\", \"label\": \"Devotional\", \"order\": 5, \"defaults\": { \"section_type\": \"devotional\" } },\n    { \"key\": \"closing\", \"label\": \"Closing Prayer\", \"order\": 6, \"defaults\": { \"section_type\": \"closing\" } }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Template by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/templates/{{templateId}}" }
+        },
+        {
+          "name": "Update Template",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/templates/{{templateId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Updated Template Name\"\n}" }
+          }
+        },
+        {
+          "name": "Delete Template",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/templates/{{templateId}}" }
+        }
+      ]
+    },
+    {
+      "name": "📖 Editions",
+      "item": [
+        {
+          "name": "List Editions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/editions",
+              "query": [
+                { "key": "brand_id", "value": "{{brandId}}", "disabled": true },
+                { "key": "status", "value": "published", "disabled": true },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Edition",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success) pm.collectionVariables.set('editionId', res.data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/editions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand_id\": \"{{brandId}}\",\n  \"template_id\": \"{{templateId}}\",\n  \"year\": 2025,\n  \"month\": 4,\n  \"language\": \"en\",\n  \"title\": \"April 2025 Edition\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Edition by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/editions/{{editionId}}" }
+        },
+        {
+          "name": "Update Edition",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/editions/{{editionId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"April 2025 — Resurrection Edition\"\n}" }
+          }
+        },
+        {
+          "name": "Get Edition Sections",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data.length > 0) pm.collectionVariables.set('sectionId', res.data[0]._id);"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/editions/{{editionId}}/sections" }
+        },
+        {
+          "name": "Generate Sections from Template",
+          "request": { "method": "POST", "url": "{{baseUrl}}/editions/{{editionId}}/sections/generate" }
+        },
+        {
+          "name": "Create Section (Manual)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/editions/{{editionId}}/sections",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slot_key\": \"special-report\",\n  \"slot_label\": \"Special Report\",\n  \"slot_order\": 7,\n  \"section_type\": \"field_report\",\n  \"title\": \"Mission Field Report\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Publish Edition",
+          "request": { "method": "POST", "url": "{{baseUrl}}/editions/{{editionId}}/publish" }
+        },
+        {
+          "name": "Unpublish Edition",
+          "request": { "method": "POST", "url": "{{baseUrl}}/editions/{{editionId}}/unpublish" }
+        }
+      ]
+    },
+    {
+      "name": "✍️ Sections",
+      "item": [
+        {
+          "name": "Get Section by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/sections/{{sectionId}}" }
+        },
+        {
+          "name": "Update Section Content",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/sections/{{sectionId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"He Is Risen!\",\n  \"subtitle\": \"A Message of Hope and Resurrection\",\n  \"summary\": \"This month we celebrate the resurrection of our Lord and Saviour Jesus Christ.\",\n  \"body\": \"<p>The resurrection of Jesus Christ is the cornerstone of our faith...</p>\",\n  \"author_print_name\": \"Pastor John Doe\",\n  \"bible_verses\": [\n    { \"reference\": \"John 11:25\", \"text\": \"I am the resurrection and the life.\", \"version\": \"KJV\" }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Submit for Review",
+          "request": { "method": "POST", "url": "{{baseUrl}}/sections/{{sectionId}}/submit-review" }
+        },
+        {
+          "name": "Approve Section",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/sections/{{sectionId}}/approve",
+            "body": { "mode": "raw", "raw": "{\n  \"notes\": \"Excellent content. Approved for publishing.\"\n}" }
+          }
+        },
+        {
+          "name": "Reject Section",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/sections/{{sectionId}}/reject",
+            "body": { "mode": "raw", "raw": "{\n  \"notes\": \"Please revise the introduction paragraph.\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎙️ Audio (TTS)",
+      "item": [
+        {
+          "name": "Test Generate Audio Stream (No S3)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/sections/{{sectionId}}/audio/test-generate",
+            "description": "TEST ONLY: Aggregates text, sends to ElevenLabs, and streams the MP3 directly back to the client as a download. Does NOT touch S3. Use this to verify your ElevenLabs key is working before configuring AWS."
+          }
+        },
+        {
+          "name": "Generate Audio (ElevenLabs)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/sections/{{sectionId}}/audio/generate",
+            "description": "Aggregates Title+Subtitle+Summary+Body, strips HTML, sends to ElevenLabs TTS API, uploads MP3 to S3. Uses SHA-256 content hash — unchanged text returns the cached S3 URL without calling ElevenLabs again (saves credits)."
+          }
+        },
+        {
+          "name": "Regenerate Audio (Force)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/sections/{{sectionId}}/audio/regenerate",
+            "description": "Forces a fresh audio generation from ElevenLabs, ignoring the content hash cache. Use this after editing section text."
+          }
+        },
+        {
+          "name": "Delete Audio",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/sections/{{sectionId}}/audio",
+            "description": "Deletes the MP3 from S3 and resets audio metadata to not_generated."
+          }
+        }
+      ]
+    },
+    {
+      "name": "👁 Reader",
+      "item": [
+        {
+          "name": "Browse Published Editions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/reader/editions",
+              "query": [
+                { "key": "brandSlug", "value": "christ-is-victor" },
+                { "key": "language", "value": "en" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Read Edition Sections (Subscription Required)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reader/editions/{{editionId}}/sections",
+            "description": "Returns edition content only if user has an active subscription for the brand."
+          }
+        }
+      ]
+    },
+    {
+      "name": "📎 Allocations",
+      "item": [
+        {
+          "name": "Assign Author to Edition",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/allocations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"edition_id\": \"{{editionId}}\",\n  \"author_id\": \"{{userId}}\",\n  \"brand_id\": \"{{brandId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Allocations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/allocations",
+              "query": [{ "key": "editionId", "value": "{{editionId}}" }]
+            }
+          }
+        },
+        {
+          "name": "Revoke Allocation",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/allocations/ALLOCATION_ID_HERE" }
+        }
+      ]
+    },
+    {
+      "name": "💳 Subscriptions",
+      "item": [
+        {
+          "name": "List Public Plans",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/subscriptions/plans",
+              "query": [{ "key": "brandId", "value": "{{brandId}}" }]
+            }
+          }
+        },
+        {
+          "name": "List Plans (Admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/subscriptions/plans/admin",
+              "query": [{ "key": "brandId", "value": "{{brandId}}", "disabled": true }]
+            }
+          }
+        },
+        {
+          "name": "My Subscriptions",
+          "request": { "method": "GET", "url": "{{baseUrl}}/subscriptions/me" }
+        },
+        {
+          "name": "All Subscriptions (Admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/subscriptions/admin",
+              "query": [
+                { "key": "brandId", "value": "{{brandId}}", "disabled": true },
+                { "key": "status", "value": "active", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Grant Subscription Manually",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/subscriptions/admin/grant",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"brand_id\": \"{{brandId}}\",\n  \"plan_id\": \"{{planId}}\",\n  \"duration_months\": 12\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Subscription",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/subscriptions/admin/SUBSCRIPTION_ID_HERE",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\",\n  \"end_at\": \"2026-12-31T23:59:59.000Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Subscription",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/subscriptions/admin/SUBSCRIPTION_ID_HERE" }
+        }
+      ]
+    },
+    {
+      "name": "💰 Payments",
+      "item": [
+        {
+          "name": "Create Razorpay Order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/payments/razorpay/order",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_id\": \"{{planId}}\",\n  \"platform\": \"web\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify Payment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/payments/razorpay/verify",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpay_order_id\": \"order_xxxxxxxxxxxxx\",\n  \"razorpay_payment_id\": \"pay_xxxxxxxxxxxxx\",\n  \"razorpay_signature\": \"signature_from_razorpay_sdk\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Razorpay Webhook (No Auth)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-razorpay-signature", "value": "WEBHOOK_SIGNATURE" }
+            ],
+            "url": "{{baseUrl}}/payments/razorpay/webhook",
+            "body": { "mode": "raw", "raw": "{ \"event\": \"payment.captured\", \"payload\": {} }" }
+          }
+        },
+        {
+          "name": "All Payments (Admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/payments/admin",
+              "query": [
+                { "key": "status", "value": "paid", "disabled": true },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📁 Upload (S3)",
+      "item": [
+        {
+          "name": "Upload Image",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/upload/image",
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "image", "type": "file", "src": "/path/to/cover.jpg" }]
+            }
+          }
+        },
+        {
+          "name": "Upload Audio",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/upload/audio",
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "audio", "type": "file", "src": "/path/to/narration.mp3" }]
+            }
+          }
+        },
+        {
+          "name": "Upload PDF",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/upload/pdf",
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "pdf", "type": "file", "src": "/path/to/magazine.pdf" }]
+            }
+          }
+        },
+        {
+          "name": "Batch Upload (up to 10 files)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/upload/batch",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "files", "type": "file", "src": "/path/to/file1.jpg" },
+                { "key": "files", "type": "file", "src": "/path/to/file2.jpg" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👨‍💼 Admin",
+      "item": [
+        {
+          "name": "Dashboard Overview",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/overview",
+              "query": [{ "key": "brand_id", "value": "{{brandId}}", "disabled": true }]
+            }
+          }
+        },
+        {
+          "name": "List All Users",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/users" }
+        },
+        {
+          "name": "Create User / Author / Admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/users",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Jane\",\n  \"last_name\": \"Smith\",\n  \"email\": \"jane@example.com\",\n  \"password\": \"Password@123\",\n  \"role\": \"AUTHOR\",\n  \"brand_ids\": [\"{{brandId}}\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/users/{{userId}}" }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/users/{{userId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"display_name\": \"Jane Smith Updated\"\n}" }
+          }
+        },
+        {
+          "name": "Update User Status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/users/{{userId}}/status",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"suspended\"\n}" }
+          }
+        },
+        {
+          "name": "List Authors",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/authors" }
+        },
+        {
+          "name": "Get Author Profile",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/authors/{{userId}}" }
+        },
+        {
+          "name": "Upsert Author Profile",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/authors/{{userId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bio\": \"Pastor John has been serving the church for 15 years.\",\n  \"profile_photo_url\": \"https://example.com/photo.jpg\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Admins",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/admins" }
+        }
+      ]
+    },
+    {
+      "name": "❤️ Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "http://localhost:5004/health"
+          }
+        }
+      ]
+    }
+  ]
+}

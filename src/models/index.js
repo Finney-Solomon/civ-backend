@@ -15,6 +15,8 @@ const RazorpayPayment = require("./razorpayPayment.model");
 const UserSession = require("./userSession.model");
 
 const AuthorProfile = require("./authorProfile.model");
+const Meeting = require("./meeting.model");
+const HomeContent = require("./homeContent.model");
 
 module.exports = {
   AuthAccount,
@@ -33,4 +35,6 @@ module.exports = {
 
   UserSession,
   AuthorProfile,
+  Meeting,
+  HomeContent,
 };

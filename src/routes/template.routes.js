@@ -22,6 +22,13 @@ router.put(
   controller.updateTemplate
 );
 
+router.patch(
+  "/:id/slots/reorder",
+  authenticate,
+  requireRole("SUPER_ADMIN", "ADMIN"),
+  controller.reorderTemplateSlots
+);
+
 router.delete(
   "/:id",
   authenticate,

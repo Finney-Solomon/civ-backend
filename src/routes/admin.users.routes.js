@@ -12,10 +12,17 @@ router.get(
   adminUsersController.listUsers
 );
 
+router.get(
+  "/users/search",
+  authenticate,
+  requireRole("SUPER_ADMIN", "ADMIN"),
+  adminUsersController.searchUsers
+);
+
 router.post(
   "/users",
   authenticate,
-  requireRole("SUPER_ADMIN", "ADMIN"),
+  requireRole("SUPER_ADMIN", "ADMIN","USER"),
   adminUsersController.createUser // create USER / AUTHOR / ADMIN
 );
 

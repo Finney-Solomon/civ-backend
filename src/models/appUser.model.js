@@ -33,6 +33,13 @@ const appUserSchema = new Schema(
     display_name: { type: String, trim: true, default: "" },
     first_name: { type: String, trim: true, default: "" },
     last_name: { type: String, trim: true, default: "" },
+    gender: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      enum: ["", "male", "female", "other", "prefer_not_to_say"],
+      default: "",
+    },
 
     email: { type: String, trim: true, lowercase: true, default: "" },
     phone: { type: String, trim: true, default: "" },

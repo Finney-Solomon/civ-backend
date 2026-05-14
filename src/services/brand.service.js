@@ -1,100 +1,123 @@
 const { MagazineBrand } = require('../models');
 
-class BrandService {
-  async createBrand(data) {
-    const brand = await MagazineBrand.create(data);
-    return brand;
+/**
+ * Register a new magazine brand
+ */
+const createBrand = async (data) => {
+  const brand = await MagazineBrand.create(data);
+  return brand;
+};
+
+/**
+ * List all brands with filters and pagination
+ */
+const getAllBrands = async (filters = {}) => {
+  const { status, search, page = 1, limit = 20 } = filters;
+  const query = {};
+
+  if (status) {
+    query.status = status;
   }
 
-  async getAllBrands(filters = {}) {
-    const { status, search, page = 1, limit = 20 } = filters;
-    const query = {};
-
-    if (status) {
-      query.status = status;
-    }
-
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { slug: { $regex: search, $options: 'i' } },
-      ];
-    }
-
-    const skip = (page - 1) * limit;
-
-    const [brands, total] = await Promise.all([
-      MagazineBrand.find(query)
-        .populate('default_template_id')
-        .sort({ created_at: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      MagazineBrand.countDocuments(query),
-    ]);
-
-    return {
-      brands,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
-    };
+  if (search) {
+    query.$or = [
+      { name: { $regex: search, $options: 'i' } },
+      { slug: { $regex: search, $options: 'i' } },
+    ];
   }
 
-  async getBrandById(id) {
-    const brand = await MagazineBrand.findById(id)
+  const skip = (page - 1) * limit;
+
+  const [brands, total] = await Promise.all([
+    MagazineBrand.find(query)
       .populate('default_template_id')
-      .lean();
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    MagazineBrand.countDocuments(query),
+  ]);
 
-    if (!brand) {
-      throw new Error('Brand not found');
-    }
+  return {
+    brands,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
+  };
+};
 
-    return brand;
+/**
+ * Get brand by ID
+ */
+const getBrandById = async (id) => {
+  const brand = await MagazineBrand.findById(id)
+    .populate('default_template_id')
+    .lean();
+
+  if (!brand) {
+    throw new Error('Brand not found');
   }
 
-  async getBrandBySlug(slug) {
-    const brand = await MagazineBrand.findOne({ slug })
-      .populate('default_template_id')
-      .lean();
+  return brand;
+};
 
-    if (!brand) {
-      throw new Error('Brand not found');
-    }
+/**
+ * Get brand by Slug
+ */
+const getBrandBySlug = async (slug) => {
+  const brand = await MagazineBrand.findOne({ slug })
+    .populate('default_template_id')
+    .lean();
 
-    return brand;
+  if (!brand) {
+    throw new Error('Brand not found');
   }
 
-  async updateBrand(id, data) {
-    const brand = await MagazineBrand.findByIdAndUpdate(
-      id,
-      { $set: data },
-      { new: true, runValidators: true }
-    ).populate('default_template_id');
+  return brand;
+};
 
-    if (!brand) {
-      throw new Error('Brand not found');
-    }
+/**
+ * Update brand metadata
+ */
+const updateBrand = async (id, data) => {
+  const brand = await MagazineBrand.findByIdAndUpdate(
+    id,
+    { $set: data },
+    { new: true, runValidators: true }
+  ).populate('default_template_id');
 
-    return brand;
+  if (!brand) {
+    throw new Error('Brand not found');
   }
 
-  async deleteBrand(id) {
-    const brand = await MagazineBrand.findByIdAndUpdate(
-      id,
-      { status: 'archived' },
-      { new: true }
-    );
+  return brand;
+};
 
-    if (!brand) {
-      throw new Error('Brand not found');
-    }
+/**
+ * Archive a brand (soft delete)
+ */
+const deleteBrand = async (id) => {
+  const brand = await MagazineBrand.findByIdAndUpdate(
+    id,
+    { status: 'archived' },
+    { new: true }
+  );
 
-    return brand;
+  if (!brand) {
+    throw new Error('Brand not found');
   }
-}
 
-module.exports = new BrandService();
+  return brand;
+};
+
+module.exports = {
+  createBrand,
+  getAllBrands,
+  getBrandById,
+  getBrandBySlug,
+  updateBrand,
+  deleteBrand,
+};

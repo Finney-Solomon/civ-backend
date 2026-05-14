@@ -8,6 +8,10 @@ const toObjectId = (id) => new mongoose.Types.ObjectId(String(id));
 
 const normalizeRole = (role) => String(role || "USER").toUpperCase();
 
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const buildRegex = (value) => new RegExp(escapeRegex(String(value).trim()), "i");
+
 function hasRole(user, role) {
   const r = normalizeRole(role);
   return (user.roles || []).some((x) => x.role === r);
@@ -87,8 +91,91 @@ module.exports = {
     }
   },
 
+  // GET /api/v1/admin/users/search?phone=...&state=...&city=...&country=...&page=1&limit=20
+  async searchUsers(req, res, next) {
+    try {
+      const {
+        phone,
+        state,
+        city,
+        country,
+        status,
+        page = 1,
+        limit = 20,
+      } = req.query;
+
+      if (!phone && !state && !city && !country) {
+        return ApiResponse.badRequest(
+          res,
+          "At least one search filter is required: phone, state, city, or country"
+        );
+      }
+
+      const match = {};
+      if (status) match.status = status;
+
+      const addressFilter = {};
+      if (state) addressFilter.state = buildRegex(state);
+      if (city) addressFilter.city = buildRegex(city);
+      if (country) addressFilter.country = buildRegex(country);
+
+      const hasAddressFilter = Object.keys(addressFilter).length > 0;
+
+      if (phone && hasAddressFilter) {
+        const phoneRegex = buildRegex(phone);
+        match.$or = [
+          {
+            $and: [
+              { phone: phoneRegex },
+              { addresses: { $elemMatch: addressFilter } },
+            ],
+          },
+          {
+            addresses: {
+              $elemMatch: {
+                ...addressFilter,
+                phone: phoneRegex,
+              },
+            },
+          },
+        ];
+      } else if (phone) {
+        const phoneRegex = buildRegex(phone);
+        match.$or = [
+          { phone: phoneRegex },
+          { "addresses.phone": phoneRegex },
+        ];
+      } else if (hasAddressFilter) {
+        match.addresses = { $elemMatch: addressFilter };
+      }
+
+      const pageNumber = Number(page);
+      const limitNumber = Number(limit);
+      const skip = (pageNumber - 1) * limitNumber;
+
+      const [items, total] = await Promise.all([
+        AppUser.find(match)
+          .sort({ created_at: -1 })
+          .skip(skip)
+          .limit(limitNumber)
+          .populate("account_id")
+          .lean(),
+        AppUser.countDocuments(match),
+      ]);
+
+      return ApiResponse.success(res, {
+        items,
+        total,
+        page: pageNumber,
+        limit: limitNumber,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   // POST /api/v1/admin/users
-  // body: { email?, phone?, password, display_name, first_name, last_name, role, brand_ids?, author_profile? }
+  // body: { email?, phone?, password, display_name, first_name, last_name, gender, role, brand_ids?, author_profile? }
   async createUser(req, res, next) {
     try {
       const {
@@ -98,6 +185,7 @@ module.exports = {
         display_name = "",
         first_name = "",
         last_name = "",
+        gender = "",
         role = "USER",
         brand_ids = [],
         author_profile,
@@ -126,6 +214,7 @@ module.exports = {
         display_name,
         first_name,
         last_name,
+        gender,
         email: normEmail || "",
         phone: normPhone || "",
         roles: [],
@@ -204,10 +293,10 @@ module.exports = {
   },
 
   // PUT /api/v1/admin/users/:id
-  // body can update names, role, brand_ids
+  // body can update names, gender, role, brand_ids
   async updateUser(req, res, next) {
     try {
-      const { display_name, first_name, last_name, role, brand_ids } = req.body;
+      const { display_name, first_name, last_name, gender, role, brand_ids } = req.body;
 
       const user = await AppUser.findById(req.params.id);
       if (!user) return ApiResponse.notFound(res, "User not found");
@@ -215,6 +304,7 @@ module.exports = {
       if (display_name !== undefined) user.display_name = display_name;
       if (first_name !== undefined) user.first_name = first_name;
       if (last_name !== undefined) user.last_name = last_name;
+      if (gender !== undefined) user.gender = gender;
 
       if (role) {
         // Keep one primary role? If you want multiple roles, remove this block.
@@ -422,6 +512,7 @@ async upsertAuthor(req, res, next) {
           display_name: update.display_name,
           first_name: update.first_name,
           last_name: update.last_name,
+          gender: body.gender ?? user.gender ?? "",
           email: update.email,
           phone: update.phone.number,
         },

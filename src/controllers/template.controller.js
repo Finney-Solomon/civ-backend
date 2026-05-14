@@ -1,20 +1,86 @@
 // apps/server/controllers/template.controller.js
-const { MagazineTemplate } = require("../models");
+const { MagazineEdition, MagazineTemplate } = require("../models");
+const cacheService = require("../services/cache.service");
 const ApiResponse = require("../utils/apiResponse");
 
 /* ---------------- helpers ---------------- */
+const normalizeArr = (v) => {
+  if (Array.isArray(v)) return v;
+  if (v === undefined || v === null) return [];
+  return [v];
+};
+
+const normalizeStringArr = (v) =>
+  normalizeArr(v)
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+
+const normalizeDefaults = (defaults = {}) => {
+  const normalized = { ...(defaults || {}) };
+
+  normalized.bible_verses = normalizeArr(
+    normalized.bible_verses ?? normalized.verses ?? []
+  );
+  delete normalized.verses;
+
+  if (normalized.audio === undefined || normalized.audio === null) {
+    normalized.audio = {};
+  }
+
+  if (normalized.content_order !== undefined) {
+    normalized.content_order = normalizeStringArr(normalized.content_order);
+  }
+  if (normalized.enabled_fields !== undefined) {
+    normalized.enabled_fields = normalizeStringArr(normalized.enabled_fields);
+  }
+
+  return normalized;
+};
+
+const shapeDefaultsForResponse = (defaults = {}) => {
+  const enabledFields = normalizeStringArr(defaults.enabled_fields);
+
+  if (!enabledFields.length) {
+    return defaults;
+  }
+
+  const allowed = new Set([
+    "section_type",
+    "content_order",
+    "enabled_fields",
+    ...enabledFields,
+  ]);
+
+  return Object.fromEntries(
+    Object.entries(defaults).filter(([key]) => allowed.has(key))
+  );
+};
+
+const shapeTemplateForResponse = (template) => {
+  if (!template) return template;
+
+  return {
+    ...template,
+    slots: (template.slots || []).map((slot) => ({
+      ...slot,
+      defaults: shapeDefaultsForResponse(slot.defaults || {}),
+    })),
+  };
+};
+
 function normalizeSlots(slots = []) {
   if (!Array.isArray(slots)) return [];
 
   const normalized = slots.map((s, idx) => {
     const key = String(s?.key || "").trim();
     const label = String(s?.label || "").trim();
+    const order = Number(s?.order);
 
     return {
       ...s,
       key,
       label,
-      order: Number.isFinite(s?.order) ? s.order : idx + 1,
+      order: Number.isFinite(order) ? order : idx + 1,
       required: typeof s?.required === "boolean" ? s.required : true,
       rules: {
         allow_audio: s?.rules?.allow_audio ?? true,
@@ -23,7 +89,7 @@ function normalizeSlots(slots = []) {
         allow_lists: s?.rules?.allow_lists ?? true,
         allow_highlights: s?.rules?.allow_highlights ?? true,
       },
-      defaults: s?.defaults || {},
+      defaults: normalizeDefaults(s?.defaults),
     };
   });
 
@@ -36,6 +102,49 @@ function normalizeSlots(slots = []) {
   }
 
   return normalized.sort((a, b) => a.order - b.order);
+}
+
+function normalizeReorderItems(items = []) {
+  if (!Array.isArray(items) || items.length === 0) {
+    const err = new Error("slots must be a non-empty array");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const normalized = items.map((item) => {
+    const key = String(item?.key || item?.slot_key || "").trim();
+    const order = Number(item?.order ?? item?.slot_order);
+
+    if (!key || !Number.isFinite(order)) {
+      const err = new Error("Each slot reorder item requires key and order");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    return { key, order };
+  });
+
+  const keys = normalized.map((x) => x.key);
+  if (new Set(keys).size !== keys.length) {
+    const err = new Error("Duplicate slot keys are not allowed");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return normalized;
+}
+
+async function invalidateEditionCachesForTemplate(templateId) {
+  const editions = await MagazineEdition.find({ template_id: templateId })
+    .select("_id")
+    .lean();
+
+  await Promise.all([
+    cacheService.delByPattern("cache:editions:pub:*"),
+    ...editions.map((edition) =>
+      cacheService.del(`cache:editionSections:${edition._id}`)
+    ),
+  ]);
 }
 
 /* ---------------- CONTROLLERS ---------------- */
@@ -59,7 +168,9 @@ exports.getTemplates = async (req, res, next) => {
       .sort({ created_at: -1 })
       .lean();
 
-    return ApiResponse.success(res, { templates });
+    return ApiResponse.success(res, {
+      templates: templates.map(shapeTemplateForResponse),
+    });
   } catch (error) {
     next(error);
   }
@@ -78,7 +189,9 @@ exports.getTemplateById = async (req, res, next) => {
       return ApiResponse.notFound(res, "Template not found");
     }
 
-    return ApiResponse.success(res, { template });
+    return ApiResponse.success(res, {
+      template: shapeTemplateForResponse(template),
+    });
   } catch (error) {
     next(error);
   }
@@ -110,7 +223,7 @@ exports.createTemplate = async (req, res, next) => {
 
     return ApiResponse.success(
       res,
-      { template: populated },
+      { template: shapeTemplateForResponse(populated) },
       "Template created successfully",
       201
     );
@@ -151,7 +264,13 @@ exports.updateTemplate = async (req, res, next) => {
       return ApiResponse.notFound(res, "Template not found");
     }
 
-    return ApiResponse.success(res, { template }, "Template updated successfully");
+    await invalidateEditionCachesForTemplate(template._id);
+
+    return ApiResponse.success(
+      res,
+      { template: shapeTemplateForResponse(template) },
+      "Template updated successfully"
+    );
   } catch (error) {
     if (error?.code === 11000) {
       return ApiResponse.conflict(
@@ -159,6 +278,55 @@ exports.updateTemplate = async (req, res, next) => {
         "Template already exists for this brand (and language)"
       );
     }
+    next(error);
+  }
+};
+
+/**
+ * PATCH /api/v1/templates/:id/slots/reorder
+ */
+exports.reorderTemplateSlots = async (req, res, next) => {
+  try {
+    const reorderItems = normalizeReorderItems(req.body?.slots);
+    const template = await MagazineTemplate.findById(req.params.id);
+
+    if (!template) {
+      return ApiResponse.notFound(res, "Template not found");
+    }
+
+    const orderByKey = new Map(reorderItems.map((item) => [item.key, item.order]));
+    const existingKeys = new Set(template.slots.map((slot) => slot.key));
+    const missingKeys = reorderItems
+      .map((item) => item.key)
+      .filter((key) => !existingKeys.has(key));
+
+    if (missingKeys.length) {
+      return ApiResponse.badRequest(
+        res,
+        `Unknown slot keys: ${missingKeys.join(", ")}`
+      );
+    }
+
+    template.slots.forEach((slot) => {
+      if (orderByKey.has(slot.key)) {
+        slot.order = orderByKey.get(slot.key);
+      }
+    });
+    template.slots = [...template.slots].sort((a, b) => a.order - b.order);
+    await template.save();
+
+    const populated = await MagazineTemplate.findById(template._id)
+      .populate("brand_id", "name slug supported_languages status")
+      .lean();
+
+    await invalidateEditionCachesForTemplate(template._id);
+
+    return ApiResponse.success(
+      res,
+      { template: shapeTemplateForResponse(populated) },
+      "Template slots reordered successfully"
+    );
+  } catch (error) {
     next(error);
   }
 };
@@ -181,7 +349,7 @@ exports.deleteTemplate = async (req, res, next) => {
 
     return ApiResponse.success(
       res,
-      { template },
+      { template: shapeTemplateForResponse(template) },
       "Template deactivated successfully"
     );
   } catch (error) {
